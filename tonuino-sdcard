@@ -20,6 +20,7 @@ function usage {
   echo "Usage: $(basename "$0") [-h] || [-v] -l <path to sdcard> || [-v] [-n] [-a] [-r] -c <music folder> <path to sdcard> || -R <path to sdcard>" >&2
   echo -e "\t-h|--help      show help/usage" >&2
   echo -e "\t-v|--verbose   show detailed information about executed commands" >&2
+  echo -e "\t--no-titles    do not print ID3v2 titles, use with '-l -v'" >&2
   echo -e "\t-l|--list      list content of sdcard based on ID3v2 tags (if available)" >&2
   echo -e "\t-c|--copy      copy content of music folder to sdcard, reflecting folder structure and naming convention" >&2
   echo -e "\t-n|--num       enumerate files mannually (e.g. in case of missing ID3v2 tags or mixed files)" >&2
@@ -111,14 +112,21 @@ list() {
 			echo "$DIR"
       # loop over MP3 files
 			for FILE in "$DIR"/*.mp3; do
-				echo -ne "\t$(basename "$FILE") => "
         # determine ID3 information and ensure output is ordered accordingly: artist, album, title
         # ordering: prepend a number per tag, sort nummerically, remove prefixed numbers
         # finally print detailed information for each MP3 file
-        id3v2 -l "$FILE" | LC_ALL=C sed -nE '/^(TPE1|TP1)/s/.*: (.*)/1Artist: \1/p;/^(TALB|TAL)/s/.*: (.*)/2, Album: \1/p;/^(TIT2|TT2)/s/.*: (.*)/3, Title: \1/p;/No (ID3|ID3v2) tag/s/.*: (.*)/3\1/p' | \
-          LC_ALL=C sort -n | LC_ALL=C cut -c2- | LC_ALL=C tr -d '\n'
-        # line break after each file
-        echo
+        if [ -n "$NO_TITLES" ]; then
+          infos=$(id3v2 -l "$FILE" | LC_ALL=C sed -nE '/^(TPE1|TP1)/s/.*: (.*)/1Artist: \1/p;/^(TALB|TAL)/s/.*: (.*)/2, Album: \1/p;/^(TIT2|TT2)/s/.*: (.*)/3/p;/No (ID3|ID3v2) tag/s/.*: (.*)/3\1/p' | \
+            LC_ALL=C sort -n | LC_ALL=C cut -c2- | LC_ALL=C tr -d '\n')
+        else
+          infos=$(id3v2 -l "$FILE" | LC_ALL=C sed -nE '/^(TPE1|TP1)/s/.*: (.*)/1Artist: \1/p;/^(TALB|TAL)/s/.*: (.*)/2, Album: \1/p;/^(TIT2|TT2)/s/.*: (.*)/3, Title: \1/p;/No (ID3|ID3v2) tag/s/.*: (.*)/3\1/p' | \
+            LC_ALL=C sort -n | LC_ALL=C cut -c2- | LC_ALL=C tr -d '\n')
+        fi
+        # print file infos
+        if [[ "$infos" != "$prev_infos" ]]; then
+  				echo -e "\t$(basename "$FILE") => $infos"
+        fi
+        prev_infos=$infos
 			done
       # line break after each folder
 			echo
@@ -193,6 +201,7 @@ while [ "$#" -gt 0 ]; do
     -n|--num) ENUM=1;;
     -R|--reorder) CMD="reorder"; SRC="$2"; shift;;
     -l|--list) CMD="list"; SRC="$2"; shift;;
+    --no-titles) NO_TITLES=1;;
     -c|--copy) CMD="copy"; SRC="$2"; DST="$3"; shift 2;;
     -h|*) usage;;
   esac

@@ -10,6 +10,7 @@ shell script to manage TonUINO sdcard content, based on ID3v2 tags (if available
     $ tonuino-sdcard [-h] || [-v] -l <path to sdcard> || [-v] [-n] [-a] [-r] -c <music folder> <path to sdcard> || -R <path to sdcard>
         -h|--help      show help/usage
         -v|--verbose   show detailed information about executed commands
+        --no-titles    do not print ID3v2 titles, use with '-l -v'
         -l|--list      list content of sdcard based on ID3v2 tags (if available)
         -c|--copy      copy content of music folder to sdcard, reflecting folder structure and naming convention
         -n|--num       enumerate files mannually (e.g. in case of missing ID3v2 tags or mixed files)
